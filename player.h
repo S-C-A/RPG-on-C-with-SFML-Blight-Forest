@@ -2,6 +2,10 @@
 #include <string>
 #include <iostream>
 
+class Item;
+class Weapon;
+class Armor;
+
 class Player {
 private:
     int max_hp;
@@ -11,6 +15,8 @@ private:
     int lvl;
     int gold;
     int current_room;
+    Weapon* equippedWeapon;
+    Armor* equippedArmor;
 
     const int MAX_LVL = 5;
 
@@ -31,11 +37,13 @@ public:
     Player() {
         lvl = 1;
         exp = 0;
-        gold = 0;
+        gold = 17;
         max_hp = hp_table[0];
         hp = max_hp;
         atk = base_atk[0];
         current_room = 0;
+        equippedWeapon = nullptr;
+        equippedArmor = nullptr;
     }
 
     int getHp() { return hp; }
@@ -60,7 +68,7 @@ public:
         current_room = room;
     }
    
-    bool isDead() const {
+    bool isAlive() const {
         return hp <= 0;
     }
 
@@ -86,6 +94,10 @@ public:
         {
             hp = 0;
         }
+    }
+
+    void buff(int amount){
+        atk = atk + amount;
     }
 
     void printStats() {
