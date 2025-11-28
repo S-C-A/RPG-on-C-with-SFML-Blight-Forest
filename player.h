@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <iostream>
+#include <vector>
 
 class Item;
 class Weapon;
@@ -17,6 +18,8 @@ private:
     int current_room;
     Weapon* equippedWeapon;
     Armor* equippedArmor;
+
+    std::vector<Item*> inventory;
 
     const int MAX_LVL = 5;
 
@@ -52,6 +55,19 @@ public:
     int getLvl() { return lvl; }
     int getExp() { return exp; }
     int getGold() { return gold; }
+
+    bool addItem(Item* item);
+
+    void equipWeapon(Weapon* newWeapon){
+        if(newWeapon = nullptr) return;
+
+        if (equippedWeapon != nullptr)
+        {
+            
+        }
+        
+
+    }
 
     void addExp(int amount) {
         if (lvl >= MAX_LVL) return;
@@ -100,6 +116,8 @@ public:
         atk = atk + amount;
     }
 
+    void printInventory();
+
     void printStats() {
         std::cout << "--- Status ---" << std::endl;
         std::cout << "Hp: " << hp << "/" << max_hp << std::endl;
@@ -115,3 +133,33 @@ public:
         std::cout << "-------------" << std::endl;
     }
 };
+
+#include "item.h"
+
+inline bool Player::addItem(Item* item){
+    if (inventory.size() < 10)
+    {
+        inventory.push_back(item);
+        std::cout <<"Item added to inventory" << std::endl;
+        return true;
+    } else {
+        std::cout <<"Item couldn't be added to inventory" <<std::endl;
+        return false;
+    }
+}
+
+inline void Player::printInventory() {
+    std::cout << "--- BACKPACK (" << inventory.size() << "/10) ---" << std::endl;
+    
+    if (inventory.empty()) {
+        std::cout << "Cantan bos." << std::endl;
+        return;
+    }
+
+    for (size_t i = 0; i < inventory.size(); i++) {
+        // item.h yukarıda ekli olduğu için getName() artık çalışır!
+        std::cout << "[" << i << "] " << inventory[i]->getName() << std::endl;
+    }
+    std::cout << "----------------------" << std::endl;
+}
+
