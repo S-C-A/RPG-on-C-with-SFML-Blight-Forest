@@ -4,6 +4,7 @@
 #include "item.h"
 #include "ItemManager.h"
 #include "condition.h"
+#include "game.h"
 
 int main(){
 
@@ -11,11 +12,8 @@ int main(){
     MapManager mapT;
     ItemManager itemT;
     Room* current_room;
+    Game rpg;
 
-    Item* wooden_sword = itemT.getItem(100);
-    Item* potion = itemT.getItem(1);
-    Item* leather_armor = itemT.getItem(200);
-    Item* poison = itemT.getItem(2);
-    Item* key = itemT.getItem(300);
+    rpg.run();
 
 }

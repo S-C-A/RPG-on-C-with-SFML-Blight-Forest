@@ -26,6 +26,7 @@ public:
             std::cout << "KRITIK! " << atk << " hasar aldin ve derin bir yara aldin!" << std::endl;
         }
         else {
+            srand(time(0));
             int choice = rand() % 3;
 
             switch (choice) {
