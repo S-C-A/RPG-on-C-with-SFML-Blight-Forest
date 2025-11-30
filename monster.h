@@ -64,9 +64,7 @@ public:
     }
 };
 
-// ========================================================
-// KRİTİK BÖLGE: Class bitti, şimdi Player'ı dahil ediyoruz
-// ========================================================
+
 #include "player.h"
 
 inline void Monster::makeMove(Player* target) {

@@ -24,4 +24,3 @@ struct StatusEffect {
         duration = _duration;
     }
 };
-

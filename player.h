@@ -115,6 +115,8 @@ public:
 
     void equipWeapon(Weapon* newWeapon);
 
+    bool removeItem(int index);
+
     void useItem(int index);
 
     void addExp(int amount) {
@@ -281,6 +283,25 @@ inline void Player::equipArmor(Armor* newArmor){
         inventory.push_back(oldArmor);
         std::cout << oldArmor->getName() << " cantaya geri kondu." << std::endl;
     }
+}
+
+inline bool Player::removeItem(int index) {
+    if (index < 0 || index >= inventory.size()) {
+        return false; 
+    }
+
+    Item* itemToDelete = inventory[index];
+
+    if (itemToDelete->canDrop() == false) {
+        std::cout << "UYARI: " << itemToDelete->getName() << " atilamaz! Bu onemli bir esya." << std::endl;
+        return false; 
+    }
+
+    std::cout << itemToDelete->getName() << " cantadan atildi." << std::endl;
+    delete itemToDelete;
+    inventory.erase(inventory.begin() + index);
+    
+    return true; 
 }
 
 inline void Player::printInventory() {
