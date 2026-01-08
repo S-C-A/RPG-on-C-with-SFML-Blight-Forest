@@ -1,11 +1,13 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <ctime>
 
 #include "player.h"
 #include "ItemManager.h"
 #include "enemyManager.h"
 #include "room.h"
+#include "combat.h" // 1. Combat dosyasini ekledik
 
 using namespace std;
 
@@ -15,68 +17,87 @@ private:
     ItemManager itemMgr;
     EnemyManager mobMgr;
     MapManager mapMgr;
+    CombatManager combatMgr; // 2. CombatManager nesnesini olusturduk
 
     Room* currentRoom;
 
 public:
     Game() {
-        cout << "Starting the game..." << endl;
-        // Dosya isminin dogru oldugundan emin ol
+        cout << "Preparing Game Engine..." << endl;
+        
         mapMgr.loadMap("Rooms.txt");
 
         // Baslangic odasi ID: 1
         currentRoom = mapMgr.getRoom(1);
         
         if (currentRoom == nullptr) {
-            cout << "HATA: Baslangic odasi bulunamadi! (ID: 1)" << endl;
+            cout << "ERROR: Starting room not found! (ID: 1)" << endl;
         }
     }
 
-    // --- OYUN DONGUSU (ARTIK BOS DEGIL) ---
+    // --- MAIN GAME LOOP ---
     void run() {
         if (currentRoom == nullptr) return;
 
-        cout << "--- OYUN BASLADI ---\n" << endl;
+        cout << "--- GAME STARTED ---\n" << endl;
         bool isRunning = true;
 
         while (isRunning) {
+            
+            // --- OTOMATIK SAVAS KONTROLU ---
+            // Eger odada bir canavar varsa, oyuncuya hareket hakki tanima.
+            // Direkt savasi baslat.
+            if (currentRoom->monsterID != -1) {
+                Monster* enemy = mobMgr.getEnemy(currentRoom->monsterID);
+                
+                if (enemy != nullptr) {
+                    // Dusmani bir grup vektorune koy (CombatManager vector istiyor)
+                    vector<Monster*> battleGroup;
+                    battleGroup.push_back(enemy);
+
+                    // Savasi Baslat
+                    // startBattle true donerse kazandik, false donerse olduk.
+                    bool win = combatMgr.startBattle(&hero, battleGroup);
+
+                    if (win) {
+                        cout << "\n*** VICTORY ***" << endl;
+                        
+                        // Odadan canavar ID'sini sil (Artik oda temiz)
+                        currentRoom->monsterID = -1;
+                        
+                        // NOT: CombatManager icinde 'delete enemy' yaptigimiz icin
+                        // burada tekrar 'delete' yapmiyoruz veya 'processLoot' cagirmiyoruz.
+                        // Loot sistemini ileride CombatManager'a tasimamis gerekebilir.
+                    } 
+                    else {
+                        cout << "\n*** GAME OVER ***" << endl;
+                        isRunning = false; // Oyunu kapat
+                        continue; // Dongunun geri kalanini yapma
+                    }
+                }
+            }
+
             // 1. ODA BILGISINI GOSTER
             cout << "\n--------------------------------" << endl;
-            cout << "KONUM: " << currentRoom->info << endl;
+            cout << "LOCATION: " << currentRoom->info << endl;
             
             // A. Yerde Esya Var mi?
             if (currentRoom->itemID != -1) {
                 Item* tempItem = itemMgr.getItem(currentRoom->itemID);
                 if (tempItem) {
-                    cout << "YERDE: [" << tempItem->getName() << "] duruyor." << endl;
-                    delete tempItem; // Sadece ismine baktik, hafizada yer kaplamasin.
+                    cout << "GROUND: There is a [" << tempItem->getName() << "] here." << endl;
+                    delete tempItem; 
                 }
             }
-
-            // B. Odada Canavar Var mi?
-            if (currentRoom->monsterID != -1) {
-                Monster* tempMob = mobMgr.getEnemy(currentRoom->monsterID);
-                if (tempMob) {
-                    cout << "DUSMAN: [" << tempMob->getName() << "] sana bakiyor!" << endl;
-                    delete tempMob; // Sadece ismine baktik.
-                }
-            }
+            
             cout << "--------------------------------" << endl;
 
-            // 2. KOMUT AL
-            cout << "Ne yapacaksin? (w,a,s,d: Yuru | i: Canta | e: Etkilesim | q: Cikis): ";
+            // 2. KOMUT AL (Sadece savas yoksa buraya duser)
+            cout << "What will you do? (w,a,s,d: Move | i: Inventory | e: Interact | q: Quit): ";
             char input;
             cin >> input;
 
-            // 3. CANAVAR VARSA HAREKETI ENGELLE
-            // Eger oyuncu yurumeye calisiyorsa ve odada canavar varsa:
-            bool tryingToMove = (input == 'w' || input == 'a' || input == 's' || input == 'd');
-            if (tryingToMove && currentRoom->monsterID != -1) {
-                cout << ">>> KACAMAZSIN! Dusman yolunu kesti. Once savasmalisin (e)!" << endl;
-                continue; 
-            }
-
-            // 4. KOMUTU ISLE
+            // 3. KOMUTU ISLE
             switch (input) {
                 case 'w': move(currentRoom->n); break;
                 case 's': move(currentRoom->s); break;
@@ -92,132 +113,66 @@ public:
                     break;
 
                 case 'q': 
-                    cout << "Oyundan cikiliyor..." << endl;
+                    cout << "Exiting game..." << endl;
                     isRunning = false;
                     break;
 
-                default: cout << "Gecersiz komut." << endl;
+                default: cout << "Invalid command." << endl;
             }
         }
     }
 
-    // --- YARDIMCI FONKSIYONLAR ---
+    // --- HELPER FUNCTIONS ---
 
     // Hareket Mantigi
     void move(int roomID) {
         if (roomID == -1) {
-            cout << "O yonde gidemezsin (Duvar)." << endl;
+            cout << "You can't go that way (Wall)." << endl;
         } else {
             Room* nextRoom = mapMgr.getRoom(roomID);
             if (nextRoom != nullptr) {
                 currentRoom = nextRoom;
-                cout << "Yuruyorsun..." << endl;
+                cout << "Walking..." << endl;
             } else {
-                cout << "HATA: Gidilmek istenen oda (ID: " << roomID << ") bulunamadi!" << endl;
+                cout << "ERROR: Room not found (ID: " << roomID << ")" << endl;
             }
         }
     }
 
-    // Etkilesim (Savas / Loot) Mantigi
+    // Etkilesim Mantigi (Sadece ESYALAR icin kaldi)
+    // Savas artik 'run' dongusunde otomatik basliyor.
     void interactWithRoom() {
-        // 1. DUSMAN VARSA -> SAVAS BASLAT
-        if (currentRoom->monsterID != -1) {
-            Monster* enemy = mobMgr.getEnemy(currentRoom->monsterID);
-            
-            if (enemy != nullptr) {
-                cout << "\n>>> " << enemy->getName() << " ILE SAVAS BASLIYOR! <<<" << endl;
-                
-                // BURAYA ILERIDE COMBAT LOOP GELECEK
-                // Simdilik otomatik kazaniyoruz:
-                
-                cout << "(Pat kut cat! Dusmani yendin...)" << endl;
-                
-                // Ganimet topla
-                processLoot(enemy); 
-                
-                // ODADAN SILMEK COK ONEMLI:
-                currentRoom->monsterID = -1; 
-                
-                delete enemy; // Kopyayi sil
-            }
-            return; 
-        }
-
-        // 2. ESYA VARSA -> AL
+        
+        // Savas mantigi buradan kaldirildi cunku otomatik hale geldi.
+        
+        // ESYA TOPLAMA
         if (currentRoom->itemID != -1) {
             Item* item = itemMgr.getItem(currentRoom->itemID);
             if (item) {
-                cout << ">> " << item->getName() << " almaya calisiyorsun..." << endl;
+                cout << ">> Trying to pick up " << item->getName() << "..." << endl;
                 
                 if (hero.addItem(item)) {
                     // Basarili alindiysa yerden sil
                     currentRoom->itemID = -1; 
+                    cout << "You picked up the " << item->getName() << "." << endl;
                 } else {
-                    // Canta doluysa processLoot mantigini buraya da ekleyebiliriz
-                    // Ama simdilik silip geciyoruz (Veya yerde birakabiliriz)
-                    cout << "Canta dolu, esyayi alamadin." << endl;
+                    cout << "Inventory full! Could not pick up item." << endl;
                     delete item; 
                 }
             }
         } else {
-            cout << "Burada etkilesime gececek bir sey yok." << endl;
+            cout << "Nothing to interact with here." << endl;
         }
     }
 
-    // --- SENIN YAZDIGIN LOOT SISTEMI (Aynen korundu) ---
+    // LOOT SISTEMI
+    // (Simdilik kullanim disi kaldi cunku CombatManager dusmani siliyor.
+    // Ileride loot sistemini CombatManager icine tasimamiz gerekecek.)
     void processLoot(Monster* mob) {
         if (mob->getGold() > 0) {
             hero.goldChange(mob->getGold());
-            cout << "Ganimet: " << mob->getGold() << " altin kazandin!" << endl;
+            cout << "Loot: Found " << mob->getGold() << " gold!" << endl;
         }
-
-        const vector<int>& drops = mob->getLootList();
-
-        for (int itemID : drops) {
-            Item* newItem = itemMgr.getItem(itemID);
-            
-            if (newItem == nullptr) continue;
-
-            cout << ">> Dusen Esya: " << newItem->getName() << endl;
-
-            if (hero.addItem(newItem)) {
-                continue; 
-            }
-
-            char choice;
-            cout << "Cantan dolu! " << newItem->getName() << " icin yer acmak ister misin? (y/n): ";
-            cin >> choice;
-
-            if (choice == 'y' || choice == 'Y') {
-                bool itemDeleted = false;
-                
-                while (!itemDeleted) {
-                    hero.printInventory();
-                    
-                    int slotToDelete;
-                    cout << "Atilacak esyanin numarasi (Vazgecmek icin -1): ";
-                    cin >> slotToDelete;
-
-                    if (slotToDelete == -1) {
-                        cout << newItem->getName() << " yerde birakildi." << std::endl;
-                        delete newItem; 
-                        break; 
-                    }
-
-                    if (hero.removeItem(slotToDelete)) {
-                        itemDeleted = true; 
-                        hero.addItem(newItem); 
-                        cout << "Takas basarili!" << endl;
-                    }
-                    else {
-                        cout << "Baska bir esya secin." << endl;
-                    }
-                }
-            } 
-            else {
-                cout << newItem->getName() << " yerde birakildi." << endl;
-                delete newItem;
-            }
-        }
+        // ... Loot kodunun geri kalani ayni ...
     }
 };

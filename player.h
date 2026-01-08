@@ -109,6 +109,10 @@ public:
         }
     }
 
+    const std::vector<Item*>& getInventory() const {
+        return inventory;
+    }
+
     bool addItem(Item* item);
 
     void equipArmor(Armor* newArmor);
