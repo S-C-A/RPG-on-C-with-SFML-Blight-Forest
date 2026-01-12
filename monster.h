@@ -16,15 +16,16 @@ protected:
     int hp;
     int atk;
     int def;
+    int exp;
     int gold; 
     vector<int> loot; 
 
 public:
     // --- CONSTRUCTORS ---
-    Monster() : ID(0), name("Bilinmiyor"), info(""), max_hp(1), hp(1), atk(0), def(0), gold(0) {}
+    Monster() : ID(0), name("Bilinmiyor"), info(""), max_hp(1), hp(1), atk(0), def(0), exp(0), gold(0) {}
     
-    Monster(int _id, string _name, string _info, int _max_hp, int _atk, int _def, int _gold) 
-        : ID(_id), name(_name), info(_info), max_hp(_max_hp), hp(_max_hp), atk(_atk), def(_def), gold(_gold) {}
+    Monster(int _id, string _name, string _info, int _max_hp, int _atk, int _def, int _exp, int _gold) 
+        : ID(_id), name(_name), info(_info), max_hp(_max_hp), hp(_max_hp), atk(_atk), def(_def), exp(_exp), gold(_gold) {}
 
     virtual ~Monster() {}
 
@@ -37,6 +38,7 @@ public:
     string getName() const { return name; }
     int getAtk() const { return atk; }
     int getDef() const { return def; }
+    int getExp() const { return exp; }
     int getGold() const { return gold; }
     int getHp() const { return hp; }
     int getMaxHp() const { return max_hp; }
@@ -66,7 +68,7 @@ public:
 
 inline void Monster::makeMove(Player* target) {
     if (target != nullptr) {
-        cout << name << " sana saldiriyor!" << endl;
+        cout << name << " attacks you!" << endl;
         target->hurt(atk);
     }
 }
