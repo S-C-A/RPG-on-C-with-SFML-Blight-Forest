@@ -9,7 +9,7 @@
 #include "enemyManager.h"
 #include "room.h"
 #include "combat.h" 
-#include "NPCManager.h" // YENI: NPC Yoneticisi eklendi
+#include "NPCManager.h" 
 
 using namespace std;
 
@@ -20,11 +20,11 @@ private:
     EnemyManager mobMgr;
     MapManager mapMgr;
     CombatManager combatMgr;
-    NPCManager npcMgr; // YENI: NPC Yoneticisi
+    NPCManager npcMgr;
 
     Room* currentRoom;
 
-    // --- DIYALOG SISTEMI (YENI) ---
+    // --- DIYALOG SISTEMI ---
     void startDialogue(NPC* npc) {
         cout << "\n========================================" << endl;
         cout << ">>> Speaking with: " << npc->getName() << endl;
@@ -37,7 +37,7 @@ private:
             DialogueNode* node = npc->getDialogue(currentNodeID);
             if (node == nullptr) break;
 
-            // 1. ROOT DEGISTIRME (Hafiza)
+            // 1. ROOT DEGISTIRME
             if (node->changeRootTo != -1) {
                 npc->setRootNode(node->changeRootTo);
             }
@@ -45,7 +45,7 @@ private:
             // 2. EKRANA YAZ
             cout << "\n" << npc->getName() << ": \"" << node->npcText << "\"\n" << endl;
 
-            // 3. OLAYLARI UYGULA (EVENTS) --- YENI KISIM ---
+            // 3. OLAYLARI UYGULA (EVENTS)
             if (node->actionType != EVENT_NONE) {
                 
                 // A) ESYA VERME
@@ -56,42 +56,37 @@ private:
                             cout << ">>> RECEIVED ITEM: " << gift->getName() << " <<<" << endl;
                         } else {
                             cout << ">>> Inventory Full! Dropped " << gift->getName() << " on ground. <<<" << endl;
-                            // Odaya birakma mantigi eklenebilir
                             currentRoom->itemID = node->actionValue; 
-                            delete gift; // Pointer'i siliyoruz cunku envantere giremedi
+                            delete gift; 
                         }
                     }
                 }
                 // B) IYILESTIRME
                 else if (node->actionType == EVENT_HEAL) {
-                    hero.heal(node->actionValue); // Player'a heal metodu eklemelisin yoksa hata verir!
+                    hero.heal(node->actionValue);
                     cout << ">>> You feel refreshed! (+" << node->actionValue << " HP) <<<" << endl;
                 }
                 // C) SAVAS BASLATMA
                 else if (node->actionType == EVENT_START_COMBAT) {
                     cout << ">>> SUDDEN ATTACK! The conversation turns violent! <<<" << endl;
                     
-                    // Konusmayi bitir
                     talking = false; 
                     
-                    // Dusmani hazirla
                     Monster* enemy = mobMgr.getEnemy(node->actionValue);
                     if (enemy) {
                         vector<Monster*> group;
                         group.push_back(enemy);
                         combatMgr.startBattle(&hero, group, itemMgr);
                     }
-                    break; // Donguden cik
+                    break;
                 }
+                // D) DUKKAN ACMA
                 else if (node->actionType == EVENT_OPEN_SHOP) {
                     openShopMenu(npc);
                 }
-
-                // Olay tek seferlik olsun diye actionType'i sifirlayabiliriz (Opsiyonel)
-                // node->actionType = EVENT_NONE; 
             }
-            // ------------------------------------------------
 
+            // Konusma bitti mi?
             if (node->options.empty()) {
                 cout << "(Conversation ends.)" << endl;
                 cin.ignore(); cin.get(); 
@@ -99,7 +94,7 @@ private:
                 break;
             }
 
-            // ... (Secenekleri gosterme ve girdi alma kismi ayni) ...
+            // Secenekler
              for (size_t i = 0; i < node->options.size(); i++) {
                 cout << i + 1 << ": " << node->options[i].text << endl;
             }
@@ -108,7 +103,6 @@ private:
             cout << "> ";
             cin >> choice;
             
-            // ... (Geri kalani ayni) ...
             if (choice < 1 || choice > node->options.size()) { cout << "Invalid choice." << endl; continue; }
             int nextID = node->options[choice - 1].nextNodeID;
             if (nextID == -1) { talking = false; } 
@@ -135,12 +129,11 @@ private:
             cout << "---------------------------" << endl;
 
             for (size_t i = 0; i < items.size(); i++) {
-                // Item ismini manager'dan cekiyoruz (Gecici bir pointer ile)
                 Item* temp = itemMgr.getItem(items[i].itemID);
                 if (temp) {
                     cout << i + 1 << ". " << temp->getName() 
                          << " (" << items[i].price << " G)" << endl;
-                    delete temp; // Sadece isim ogrenmek icin yarattik, siliyoruz
+                    delete temp; 
                 }
             }
             cout << "0. Exit Shop" << endl;
@@ -155,28 +148,21 @@ private:
                 cout << "Merchant: Come back soon!" << endl;
             }
             else if (choice > 0 && choice <= items.size()) {
-                // Secilen urunu al
                 ShopItem selected = items[choice - 1];
                 
-                // Para yetiyor mu?
-                if (hero.getGold() > selected.price) {
-                    // Item'i gercekten olustur ve envantere ver
+                if (hero.getGold() >= selected.price) {
                     Item* newItem = itemMgr.getItem(selected.itemID);
                     if (hero.addItem(newItem)) {
-                        hero.goldChange(-selected.price);
+                        hero.goldChange(-selected.price); // Parayi dus
                         cout << ">>> PURCHASE SUCCESSFUL! <<<" << endl;
                     } else {
-                        // Envanter doluysa parayi iade et ve itemi sil
                         cout << ">>> Inventory Full! Money refunded. <<<" << endl;
-                        hero.goldChange(selected.price);
+                        // Para dusmedik o yuzden iadeye gerek yok, itemi sil yeter.
                         delete newItem;
                     }
+                } else {
+                    cout << ">>> Not enough gold! <<<" << endl;
                 }
-                else
-                {
-                    cout << "Not enough gold!";
-                }
-                
             } else {
                 cout << "Invalid selection." << endl;
             }
@@ -205,44 +191,39 @@ private:
     }
 
 public:
-Game() {
+    Game() {
         cout << "Initializing Game Engine..." << endl;
         
+        // 1. Haritayi Yukle (NPC'ler artik Rooms.txt icinden okunuyor)
         mapMgr.loadMap("Rooms.txt");
-        currentRoom = mapMgr.getRoom(1); // Oyun 1. Odada baslar
+        
+        // 2. Baslangic Odasini Al
+        currentRoom = mapMgr.getRoom(1); 
         
         if (!currentRoom) cout << "CRITICAL ERROR: Room 1 not found!" << endl;
 
-        // --- TEST 1: ODA 1'E MERHCANT EKLE (HEMEN TEST ETMEK ICIN) ---
-        if (currentRoom) {
-            // ID 51: Mysterious Merchant
-            currentRoom->npcID.push_back(51); 
-            cout << "DEBUG: Mysterious Merchant (ID 51) added to Room 1." << endl;
-        }
-
-        // --- TEST 2: ODA 4'E OLD SAGE EKLE (ESKI TEST DE DURSUN) ---
-        Room* r4 = mapMgr.getRoom(4);
-        if (r4) {
-            // ID 50: Old Sage
-            r4->npcID.push_back(50); 
-            cout << "DEBUG: Old Sage (ID 50) added to Room 4 manually." << endl;
-        }
+        // NOT: Artik burada manuel "npcID.push_back" yapmiyoruz.
+        // Cunku MapManager dosya okurken npcID degiskenini set etti.
     }
 
     void setupCheats() {
         Item* godSword = itemMgr.getItem(199);
         if (godSword) hero.addItem(godSword);
-        cout << ">>> CHEAT MODE ON: God Sword added.\n" << endl;
+        hero.goldChange(1000); // Test icin para
+        cout << ">>> CHEAT MODE ON: God Sword + 1000 Gold added.\n" << endl;
     }
 
     void run() {
         if (!currentRoom) return;
+        
+        setupCheats();
+
         cout << "--- GAME START ---\n" << endl;
         bool isRunning = true;
 
         while (isRunning) {
             
-            // 1. SAVAS KONTROLU
+            // 1. SAVAS KONTROLU (Oncelik Dusmanda)
             if (!currentRoom->monsterID.empty()) {
                 vector<Monster*> battleGroup;
                 for (int mID : currentRoom->monsterID) {
@@ -258,10 +239,11 @@ Game() {
                 }
             }
 
-            // 2. NPC KONTROLU (Savas bittiyse veya yoksa calisir)
-            if (!currentRoom->npcID.empty()) {
-                // Ilk NPC'yi al
-                int npcID = currentRoom->npcID[0];
+            // 2. NPC KONTROLU (Savas yoksa calisir)
+            // DEGISTI: Vektor kontrolu (.empty()) yerine int kontrolu (!= -1)
+            if (currentRoom->npcID != -1) {
+                
+                int npcID = currentRoom->npcID; // [0] kaldirildi
                 NPC* npc = npcMgr.getNPC(npcID);
 
                 if (npc) {
@@ -270,7 +252,6 @@ Game() {
                         cout << "\n>>> Someone approaches you..." << endl;
                         startDialogue(npc);
                     } else {
-                        // Zaten tanisiyorsak bilgi ver
                         cout << "INFO: " << npc->getName() << " is standing here." << endl;
                     }
                 }
@@ -303,8 +284,9 @@ Game() {
                 case 'i': manageInventory(); break;
                 
                 case 't': // TALK (KONUSMA TUSU)
-                    if (!currentRoom->npcID.empty()) {
-                        NPC* npc = npcMgr.getNPC(currentRoom->npcID[0]);
+                    // DEGISTI: Vektor kontrolu yerine int kontrolu
+                    if (currentRoom->npcID != -1) {
+                        NPC* npc = npcMgr.getNPC(currentRoom->npcID);
                         if(npc) startDialogue(npc);
                     } else {
                         cout << "There is no one to talk to." << endl;

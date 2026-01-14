@@ -14,13 +14,14 @@ struct Room {
     int n, s, e, w;        
     int itemID;     
     std::vector<int> monsterID; // Coklu dusman destegi
-    std::vector<int> npcID;
+    int npcID;
 
-    Room(int _id = 0, std::string _info = "", int _n = -1, int _s = -1, int _e = -1, int _w = -1, int _item = -1) {
+    Room(int _id = 0, std::string _info = "", int _n = -1, int _s = -1, int _e = -1, int _w = -1, int _item = -1, int _npc = -1) {
         id = _id;
         info = _info;
         n = _n; s = _s; e = _e; w = _w;
         itemID = _item;
+        npcID = _npc;
     }
 };
 
@@ -47,6 +48,7 @@ public:
 
             int id = 0, n = -1, s = -1, e = -1, w = -1;
             int itemID = -1;   
+            int npcID = -1;
             string info;
 
             // --- 1. SABIT VERILERI OKU ---
@@ -65,8 +67,11 @@ public:
             if (getline(ss, segment, ',')) {
                  if (!segment.empty()) itemID = stoi(segment);
             }
+            if (getline(ss, segment, ',')) {
+                 if (!segment.empty()) npcID = stoi(segment);
+            }
 
-            Room newRoom(id, info, n, s, e, w, itemID);
+            Room newRoom(id, info, n, s, e, w, itemID, npcID);
 
             // --- 2. DINAMIK CANAVAR OKUMA ---
             // Satirin geri kalanini oku ve listeye ekle
